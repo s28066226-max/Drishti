@@ -1,0 +1,14 @@
+# One-click deploy on Render (free plan, HTTPS included so the camera works on phones).
+services:
+  - type: web
+    name: drishti
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: GEMINI_API_KEY
+        sync: false # entered in the Render dashboard, never committed

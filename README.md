@@ -94,7 +94,11 @@ npm test                 # spatial engine, quality guard and voice-command tests
 
 Use **Chrome** for voice input (Web Speech API). On a laptop without a camera, use **Photo** to upload a picture.
 
-### Use it on a phone (needs HTTPS for the camera): deploy to Cloud Run
+### Use it on a phone (needs HTTPS for the camera)
+
+**Render (free, no card):** New → Blueprint → select this repo. `render.yaml` configures everything; paste your `GEMINI_API_KEY` when asked.
+
+**Google Cloud Run (needs a billing account):**
 
 ```bash
 gcloud run deploy drishti --source . --region asia-south1 \
