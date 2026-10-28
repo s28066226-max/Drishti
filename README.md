@@ -2,6 +2,8 @@
 
 > PromptWars × Kick To Tech 2026 · Build What Matters: The AI-Powered Student Innovation Challenge
 > Domain: **Accessibility · Assistive AI**
+>
+> **Live demo:** https://drishti-b5ls.onrender.com (open in Chrome, allow camera and microphone; the free server may take ~50 s to wake up)
 
 **Drishti** (Sanskrit/Hindi for *sight*) turns any phone into a real-time visual assistant for blind and low-vision people. It works in **8 Indian languages**. Point the camera and Drishti can:
 
