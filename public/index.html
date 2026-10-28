@@ -19,6 +19,7 @@
   <header class="topbar">
     <div class="logo"><img src="favicon.svg" alt="" width="30" height="30" /><span>Drishti</span></div>
     <span id="aiBadge" class="badge">…</span>
+    <button id="sosBtn" class="btn danger sos" aria-label="SOS: share my location and surroundings">SOS</button>
     <label class="lang">
       <span class="sr-only">Language</span>
       <select id="lang" aria-label="Language"></select>
@@ -74,6 +75,11 @@
         <span id="meta" class="meta"></span>
       </div>
       <div id="details" class="details"><p class="muted">Results appear here with directions and distances.</p></div>
+      <details class="help" id="settings">
+        <summary>Settings</summary>
+        <label class="setting"><input type="checkbox" id="srMode" /> Screen-reader mode <small>(TalkBack / VoiceOver reads results; Drishti stays silent)</small></label>
+        <label class="setting">Speech speed <input type="range" id="rate" min="0.7" max="1.6" step="0.1" value="1" /></label>
+      </details>
       <details class="help">
         <summary>Keyboard shortcuts</summary>
         <ul>

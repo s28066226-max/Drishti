@@ -1,5 +1,5 @@
 import { LANGS, t, clockLabel, PROXIMITY } from './i18n.js';
-import { speak, repeatLast, stopSpeaking, warmUpVoices } from './speech.js';
+import { speak, repeatLast, stopSpeaking, warmUpVoices, configureSpeech } from './speech.js';
 import { startCamera, grabFrame, sourceSize } from './camera.js';
 import { checkCanvas } from './quality.js';
 import { listenOnce, canListen } from './listen.js';
@@ -301,6 +301,51 @@ async function ask() {
   look();
 }
 
+// ---------- SOS: share location + what the camera last saw ----------
+
+function currentPosition() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve(p.coords),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60_000 },
+    );
+  });
+}
+
+async function sos() {
+  say('Getting your location to share.');
+  const c = await currentPosition();
+  const where = c ? `https://maps.google.com/?q=${c.latitude.toFixed(6)},${c.longitude.toFixed(6)}` : 'location unavailable';
+  const seen = state.last?.speech ? `\nWhat my camera sees: ${state.last.speech}` : '';
+  const text = `🆘 I need help. My location: ${where}${seen}\n(Sent from Drishti)`;
+  try {
+    if (navigator.share) await navigator.share({ title: 'SOS', text });
+    else window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+    say('Choose a contact to send your location. For emergencies call 112.');
+  } catch {
+    say('Sharing was cancelled. For emergencies call 112.');
+  }
+}
+
+// ---------- settings ----------
+
+function loadSettings() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem('drishti-settings') || '{}'); } catch { /* storage blocked */ }
+  const settings = { rate: 1, screenReader: false, ...saved };
+  $('#rate').value = settings.rate;
+  $('#srMode').checked = settings.screenReader;
+  configureSpeech(settings);
+}
+
+function saveSettings() {
+  const settings = { rate: Number($('#rate').value), screenReader: $('#srMode').checked };
+  configureSpeech(settings);
+  try { localStorage.setItem('drishti-settings', JSON.stringify(settings)); } catch { /* storage blocked */ }
+}
+
 function stopAll() {
   stopLoop();
   stopSpeaking();
@@ -355,6 +400,9 @@ function bind() {
   $('#lookBtn').addEventListener('click', look);
   $('#repeatBtn').addEventListener('click', repeatLast);
   $('#askBtn').addEventListener('click', ask);
+  $('#sosBtn').addEventListener('click', sos);
+  $('#rate').addEventListener('change', saveSettings);
+  $('#srMode').addEventListener('change', saveSettings);
   $('#upload').addEventListener('change', (e) => useStill(e.target.files[0]));
   $$('.mode').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
   $('#findBar').addEventListener('submit', (e) => { e.preventDefault(); look(); });
@@ -379,6 +427,7 @@ async function boot() {
   $('#lang').innerHTML = Object.entries(LANGS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('');
   try { state.lang = localStorage.getItem('drishti-lang') || 'en'; } catch { /* storage blocked */ }
   $('#lang').value = state.lang;
+  loadSettings();
   bind();
 
   const health = await fetch('/api/health').then((r) => r.json()).catch(() => null);
