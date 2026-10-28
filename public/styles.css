@@ -86,7 +86,9 @@ select { background: var(--surface-2); border: 1px solid var(--line); border-rad
 .mode i { font-style: normal; font-size: 24px; line-height: 1; }
 .mode kbd { margin: 0; }
 .mode.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.actions { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; }
+.actions { display: grid; grid-template-columns: 2fr 1.2fr 1fr 1fr; gap: 8px; }
+.btn.ask { border-color: var(--accent); color: var(--accent); }
+.btn.ask.listening { background: var(--accent); color: var(--accent-ink); animation: flash 1s ease-in-out infinite; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 56px; padding: 10px 14px; cursor: pointer;
   background: var(--surface-2); border: 2px solid var(--line); border-radius: 14px; font-weight: 700; text-decoration: none; color: var(--ink);
@@ -122,6 +124,7 @@ select { background: var(--surface-2); border: 1px solid var(--line); border-rad
   .viewport { aspect-ratio: 3 / 4; max-height: 62vh; width: 100%; }
 }
 @media (max-width: 480px) {
+  .actions { grid-template-columns: 1fr 1fr; }
   .mode { font-size: 12px; min-height: 68px; }
   .mode kbd, .actions kbd { display: none; }
   .badge { display: none; }

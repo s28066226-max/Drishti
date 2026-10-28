@@ -2,6 +2,8 @@ import { LANGS, t, clockLabel, PROXIMITY } from './i18n.js';
 import { speak, repeatLast, stopSpeaking, warmUpVoices } from './speech.js';
 import { startCamera, grabFrame, sourceSize } from './camera.js';
 import { checkCanvas } from './quality.js';
+import { listenOnce, canListen } from './listen.js';
+import { parseCommand } from './commands.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
@@ -171,9 +173,46 @@ async function look() {
   return lookOnce();
 }
 
+// ---------- voice commands ----------
+
+async function ask() {
+  if (state.busy || state.listening) return;
+  stopSpeaking();
+  let heard = '';
+  if (canListen) {
+    state.listening = true;
+    $('#askBtn').classList.add('listening');
+    $('#caption').textContent = '🎙 Listening…';
+    try {
+      heard = await listenOnce(lang());
+    } catch (err) {
+      say(err.message);
+    } finally {
+      state.listening = false;
+      $('#askBtn').classList.remove('listening');
+    }
+  } else {
+    heard = window.prompt('Ask Drishti (e.g. “find my keys”, “is the door open?”)') || '';
+  }
+  const cmd = parseCommand(heard);
+  if (!cmd) { $('#caption').textContent = 'I did not hear anything. Tap Ask and speak.'; return; }
+  $('#caption').textContent = `“${heard}”`;
+
+  if (cmd.action === 'stop') { stopAll(); return; }
+  if (cmd.mode === 'ask') { lookOnce('ask', { query: cmd.query }); return; }
+  setMode(cmd.mode, { silent: true });
+  if (cmd.query) $('#findInput').value = cmd.query;
+  look();
+}
+
+function stopAll() {
+  stopSpeaking();
+  say(t(lang(), 'stopped'));
+}
+
 // ---------- modes & input ----------
 
-function setMode(mode) {
+function setMode(mode, { silent = false } = {}) {
   state.mode = mode;
   $$('.mode').forEach((b) => {
     const on = b.dataset.mode === mode;
@@ -181,8 +220,8 @@ function setMode(mode) {
     b.setAttribute('aria-pressed', on);
   });
   $('#findBar').hidden = mode !== 'find';
-  if (mode === 'find') $('#findInput').focus();
-  speak(MODE_LABEL[mode], 'en', { remember: false });
+  if (mode === 'find' && !silent) $('#findInput').focus();
+  if (!silent) speak(MODE_LABEL[mode], 'en', { remember: false });
 }
 
 async function start() {
@@ -215,6 +254,7 @@ function bind() {
   $('#startBtn').addEventListener('click', start);
   $('#lookBtn').addEventListener('click', look);
   $('#repeatBtn').addEventListener('click', repeatLast);
+  $('#askBtn').addEventListener('click', ask);
   $('#upload').addEventListener('change', (e) => useStill(e.target.files[0]));
   $$('.mode').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
   $('#findBar').addEventListener('submit', (e) => { e.preventDefault(); look(); });
@@ -229,8 +269,9 @@ function bind() {
     if (e.code === 'Space') { e.preventDefault(); if (!$('#startBtn').hidden) start(); else look(); }
     else if (/^Digit[1-5]$/.test(e.code)) setMode(['describe', 'read', 'money', 'find', 'guide'][Number(e.code.slice(-1)) - 1]);
     else if (e.key === 'r' || e.key === 'R') repeatLast();
+    else if (e.key === 'a' || e.key === 'A') ask();
     else if (e.key === 'u' || e.key === 'U') $('#upload').click();
-    else if (e.key === 'Escape') stopSpeaking();
+    else if (e.key === 'Escape') stopAll();
   });
 }
 
