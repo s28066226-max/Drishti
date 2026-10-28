@@ -212,7 +212,7 @@ async function findLoop(query) {
         lastSpoken = { state: g.state, at: now };
       }
     }
-    await sleep(700);
+    await sleep(1200);
   }
   stopLoop(loop);
 }
@@ -236,7 +236,7 @@ async function guideLoop() {
       say(r.speech, { interrupt: false });
       previous = r.speech;
     }
-    await sleep(900);
+    await sleep(2000);
   }
   stopLoop(loop);
 }
