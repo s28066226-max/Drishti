@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { generateJSON, hasKey, pickModel, currentModel } from './lib/gemini.js';
+import { generateJSON, hasKey, pickModel, currentModel, warmUp } from './lib/gemini.js';
 import { LANGUAGES, MODES, buildPrompt } from './lib/prompts.js';
 import { enrichObjects, topAlert, currencyTotal, findGuidance } from './lib/spatial.js';
 
@@ -128,4 +128,5 @@ createServer(async (req, res) => {
 }).listen(PORT, () => {
   console.log(`Drishti running at http://localhost:${PORT}`);
   if (!hasKey()) console.log('No GEMINI_API_KEY found — add it to .env to enable vision.');
+  else warmUp().catch((err) => console.warn(`[gemini] warm-up failed: ${err.message}`));
 });
