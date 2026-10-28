@@ -154,6 +154,7 @@ async function see(mode, { query = '', previous = '' } = {}) {
     return r;
   } catch (err) {
     say(err.message);
+    if (state.loop) stopLoop(); // don't keep hammering an AI service that is down or out of quota
     return null;
   } finally {
     state.busy = false;
