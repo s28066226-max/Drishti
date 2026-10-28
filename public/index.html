@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" />
+  <title>Drishti — AI eyes in your language</title>
+  <meta name="description" content="Real-time AI eyes for blind and low-vision people: describe surroundings, read text, count money, find objects and walk safely, in 8 Indian languages." />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a class="skip" href="#lookBtn">Skip to the Look button</a>
+
+  <header class="topbar">
+    <div class="logo"><img src="favicon.svg" alt="" width="30" height="30" /><span>Drishti</span></div>
+    <span id="aiBadge" class="badge">…</span>
+    <label class="lang">
+      <span class="sr-only">Language</span>
+      <select id="lang" aria-label="Language"></select>
+    </label>
+  </header>
+
+  <main class="app">
+    <section class="viewport" aria-label="Camera view">
+      <video id="video" playsinline muted autoplay aria-hidden="true"></video>
+      <img id="still" alt="" hidden />
+      <canvas id="overlay" aria-hidden="true"></canvas>
+      <div id="alertBox" class="alert" role="alert" hidden></div>
+      <div id="caption" class="caption" aria-live="polite">Tap “Start” to turn on the camera.</div>
+      <button id="startBtn" class="start">
+        <span class="start-eye" aria-hidden="true"></span>
+        <b>Start Drishti</b>
+        <small>Turns on camera and voice</small>
+      </button>
+      <div id="busy" class="busy" hidden aria-hidden="true"></div>
+    </section>
+
+    <div class="controls">
+      <nav class="modes" aria-label="Modes">
+        <button class="mode active" data-mode="describe" aria-pressed="true"><i aria-hidden="true">◎</i>Describe<kbd>1</kbd></button>
+        <button class="mode" data-mode="read" aria-pressed="false"><i aria-hidden="true">¶</i>Read<kbd>2</kbd></button>
+        <button class="mode" data-mode="money" aria-pressed="false"><i aria-hidden="true">₹</i>Money<kbd>3</kbd></button>
+        <button class="mode" data-mode="find" aria-pressed="false"><i aria-hidden="true">⌖</i>Find<kbd>4</kbd></button>
+        <button class="mode" data-mode="guide" aria-pressed="false"><i aria-hidden="true">➤</i>Guide<kbd>5</kbd></button>
+      </nav>
+
+      <form id="findBar" class="find-bar" hidden>
+        <label for="findInput" class="sr-only">What are you looking for?</label>
+        <input id="findInput" placeholder="What are you looking for? e.g. my keys" autocomplete="off" />
+        <button id="findBtn" class="btn primary" type="submit">Start finding</button>
+      </form>
+
+      <div class="actions">
+        <button id="lookBtn" class="btn look" disabled>
+          <span id="lookLabel">Look</span><kbd>Space</kbd>
+        </button>
+        <button id="repeatBtn" class="btn" aria-label="Repeat last message">↻ Repeat<kbd>R</kbd></button>
+        <label class="btn" id="uploadBtn">
+          <input id="upload" type="file" accept="image/*" hidden />
+          ⇪ Photo<kbd>U</kbd>
+        </label>
+      </div>
+    </div>
+
+    <aside class="panel" aria-label="Details">
+      <div class="panel-head">
+        <h2>What Drishti sees</h2>
+        <span id="meta" class="meta"></span>
+      </div>
+      <div id="details" class="details"><p class="muted">Results appear here with directions and distances.</p></div>
+      <details class="help">
+        <summary>Keyboard shortcuts</summary>
+        <ul>
+          <li><kbd>Space</kbd> Look now</li>
+          <li><kbd>1</kbd>–<kbd>5</kbd> Switch mode</li>
+          <li><kbd>R</kbd> Repeat · <kbd>U</kbd> Upload photo · <kbd>Esc</kbd> Stop</li>
+        </ul>
+      </details>
+    </aside>
+  </main>
+
+  <script src="js/app.js" type="module"></script>
+</body>
+</html>
