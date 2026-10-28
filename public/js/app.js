@@ -4,7 +4,7 @@ import { startCamera, grabFrame, sourceSize } from './camera.js';
 import { checkCanvas } from './quality.js';
 import { listenOnce, canListen } from './listen.js';
 import { parseCommand } from './commands.js';
-import { initAudio, startSonar, updateSonar, stopSonar, successChime } from './sonar.js';
+import { initAudio, startSonar, updateSonar, stopSonar, successChime, alertTone } from './sonar.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
@@ -20,6 +20,14 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 function say(text, opts) {
   $('#caption').textContent = text;
   speak(text, lang(), opts);
+}
+
+// Hazards interrupt everything: tone + vibration (Android) + assertive on-screen alert.
+const VIBRATION = { high: [250, 100, 250, 100, 250], medium: [180] };
+function signalHazard(alert) {
+  if (!alert) return;
+  alertTone(alert.level);
+  navigator.vibrate?.(VIBRATION[alert.level]);
 }
 
 function showAlert(alert) {
@@ -142,6 +150,7 @@ async function see(mode, { query = '', previous = '' } = {}) {
     drawOverlay(r.objects);
     renderDetails(r);
     showAlert(r.alert);
+    signalHazard(r.alert);
     return r;
   } catch (err) {
     say(err.message);
@@ -168,7 +177,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function setLive(label) {
   $('#lookBtn').classList.toggle('live', Boolean(label));
-  $('#lookLabel').textContent = label || (state.mode === 'find' ? 'Find' : 'Look');
+  $('#lookLabel').textContent = label || { find: 'Find', guide: 'Start guide' }[state.mode] || 'Look';
 }
 
 // ---------- Find: continuous search with spoken steering + stereo sonar ----------
@@ -208,6 +217,30 @@ async function findLoop(query) {
   stopLoop(loop);
 }
 
+// ---------- Guide: walking companion that only speaks when something matters ----------
+
+async function guideLoop() {
+  const loop = { kind: 'guide', active: true };
+  state.loop = loop;
+  setLive('Stop guide');
+  say(t(lang(), 'guideOn'));
+  let previous = '';
+
+  while (loop.active) {
+    const r = await see('guide', { previous });
+    if (!loop.active) break;
+    if (r?.alert) {
+      say(r.speech || `${r.alert.label}, ${r.alert.clock} o'clock`); // hazards interrupt
+      previous = r.speech || previous;
+    } else if (r?.changed && r.speech) {
+      say(r.speech, { interrupt: false });
+      previous = r.speech;
+    }
+    await sleep(900);
+  }
+  stopLoop(loop);
+}
+
 function stopLoop(loop = state.loop) {
   if (!loop) return;
   loop.active = false;
@@ -220,13 +253,19 @@ function stopLoop(loop = state.loop) {
 
 async function look() {
   if (!state.camera && $('#still').hidden) return;
-  if (state.loop) { stopLoop(); say(t(lang(), 'stopped')); return; }
+  if (state.loop) {
+    const { kind } = state.loop;
+    stopLoop();
+    say(t(lang(), kind === 'guide' ? 'guideOff' : 'stopped'));
+    return;
+  }
   if (state.mode === 'find') {
     const q = $('#findInput').value.trim();
     if (!q) { $('#findInput').focus(); return say('What are you looking for?'); }
     if (!state.camera) return lookOnce('find', { query: q }); // a still photo can't be steered
     return findLoop(q);
   }
+  if (state.mode === 'guide' && state.camera) return guideLoop();
   return lookOnce();
 }
 
