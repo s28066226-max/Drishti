@@ -1,5 +1,7 @@
 # Drishti — AI eyes in your language
 
+[![CI](https://github.com/s28066226-max/Drishti/actions/workflows/ci.yml/badge.svg)](https://github.com/s28066226-max/Drishti/actions/workflows/ci.yml)
+
 > PromptWars × Kick To Tech 2026 · Build What Matters: The AI-Powered Student Innovation Challenge
 > Domain: **Accessibility · Assistive AI**
 >
@@ -91,7 +93,7 @@ Requirements: **Node.js 20.12+**. There are zero dependencies, so no `npm instal
 ```bash
 cp .env.example .env     # add a free key from https://aistudio.google.com/apikey
 npm start                # → http://localhost:8080 (camera works on localhost)
-npm test                 # spatial engine, quality guard and voice-command tests
+npm test                 # 31 tests, no network or API quota needed
 ```
 
 Use **Chrome** for voice input (Web Speech API). On a laptop without a camera, use **Photo** to upload a picture.
@@ -107,10 +109,25 @@ gcloud run deploy drishti --source . --region asia-south1 \
   --allow-unauthenticated --set-env-vars GEMINI_API_KEY=YOUR_KEY
 ```
 
+## Testing and security
+
+`npm test` runs 31 tests with Node's built-in runner; Google's API is mocked, so no key or quota is used. GitHub Actions runs them on Node 20 and 22 for every push.
+
+| Area | What is tested |
+|---|---|
+| HTTP API (`test/app.test.js`) | Security headers, path traversal, malformed URLs, input validation, 413/503 handling, rate limiting, and full money / describe / find responses with server-side reasoning |
+| AI failover (`test/gemini.test.js`) | Flash → Flash-Lite → Gemma order, sticky model, instant failure when all quotas are exhausted, 503 failover, thinking-config fallback, malformed-JSON retry |
+| Spatial engine (`test/spatial.test.js`) | Box validation, clock directions, proximity, hazard ranking, currency totals, Find steering |
+| Frame quality (`test/quality.test.js`) | Darkness and blur detection |
+| Voice commands (`test/commands.test.js`) | English and Hindi commands, Unicode word boundaries |
+
+Security: strict Content-Security-Policy, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, a Permissions-Policy limited to camera/mic/location, body-size limits, per-client rate limiting, validated inputs, no secrets in the repo (API key only in `.env` / host settings), and no images stored.
+
 ## Project structure
 
 ```
-server.js              HTTP server, /api/see, validation, rate limiting, static files
+server.js              Loads config and starts the HTTP server
+lib/app.js             Routing, validation, security headers, rate limiting, static files
 lib/gemini.js          Gemini REST client: model discovery, low-latency mode, JSON retry
 lib/prompts.js         Safety-first system prompt + per-mode tasks and response schemas
 lib/spatial.js         Deterministic spatial engine (directions, distance, hazards, money, find)
@@ -120,7 +137,7 @@ public/js/sonar.js     Web Audio stereo sonar, success chime, hazard tones
 public/js/listen.js    Speech recognition in 8 Indian languages
 public/js/commands.js  Unicode-aware voice-command parser (English + Hindi/Marathi)
 public/js/speech.js    Text-to-speech with per-language voice selection
-test/                  Unit tests (node --test)
+test/                  31 unit and integration tests (node --test), CI in .github/workflows
 ```
 
 ## Impact and roadmap
