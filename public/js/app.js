@@ -4,12 +4,13 @@ import { startCamera, grabFrame, sourceSize } from './camera.js';
 import { checkCanvas } from './quality.js';
 import { listenOnce, canListen } from './listen.js';
 import { parseCommand } from './commands.js';
+import { initAudio, startSonar, updateSonar, stopSonar, successChime } from './sonar.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 
 const MODE_LABEL = { describe: 'Describe', read: 'Read', money: 'Money', find: 'Find', guide: 'Guide' };
-const state = { mode: 'describe', lang: 'en', camera: false, busy: false, last: null };
+const state = { mode: 'describe', lang: 'en', camera: false, busy: false, last: null, loop: null };
 const lang = () => state.lang;
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -163,12 +164,68 @@ async function lookOnce(mode = state.mode, opts) {
   return r;
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function setLive(label) {
+  $('#lookBtn').classList.toggle('live', Boolean(label));
+  $('#lookLabel').textContent = label || (state.mode === 'find' ? 'Find' : 'Look');
+}
+
+// ---------- Find: continuous search with spoken steering + stereo sonar ----------
+
+async function findLoop(query) {
+  const loop = { kind: 'find', active: true };
+  state.loop = loop;
+  setLive('Stop finding');
+  startSonar();
+  say(`${t(lang(), 'looking')}: ${query}`);
+  let lastSpoken = { state: null, at: 0 };
+  let explainedMissing = false;
+
+  while (loop.active) {
+    const r = await see('find', { query });
+    if (!loop.active) break;
+    if (r) {
+      const g = r.guidance;
+      updateSonar(g);
+      const now = Date.now();
+      if (g.state === 'reach') {
+        successChime();
+        say(`${t(lang(), 'reach')} ${r.speech}`);
+        break;
+      }
+      if (g.state === 'not_found' && !explainedMissing) {
+        say(r.speech); // AI suggests where such things usually are
+        explainedMissing = true;
+        lastSpoken = { state: g.state, at: now };
+      } else if (g.state !== lastSpoken.state || now - lastSpoken.at > 5000) {
+        say(t(lang(), g.state === 'not_found' ? 'notFound' : g.state));
+        lastSpoken = { state: g.state, at: now };
+      }
+    }
+    await sleep(700);
+  }
+  stopLoop(loop);
+}
+
+function stopLoop(loop = state.loop) {
+  if (!loop) return;
+  loop.active = false;
+  if (loop.kind === 'find') stopSonar();
+  if (state.loop === loop) {
+    state.loop = null;
+    setLive(null);
+  }
+}
+
 async function look() {
   if (!state.camera && $('#still').hidden) return;
+  if (state.loop) { stopLoop(); say(t(lang(), 'stopped')); return; }
   if (state.mode === 'find') {
     const q = $('#findInput').value.trim();
     if (!q) { $('#findInput').focus(); return say('What are you looking for?'); }
-    return lookOnce('find', { query: q });
+    if (!state.camera) return lookOnce('find', { query: q }); // a still photo can't be steered
+    return findLoop(q);
   }
   return lookOnce();
 }
@@ -206,6 +263,7 @@ async function ask() {
 }
 
 function stopAll() {
+  stopLoop();
   stopSpeaking();
   say(t(lang(), 'stopped'));
 }
@@ -213,6 +271,7 @@ function stopAll() {
 // ---------- modes & input ----------
 
 function setMode(mode, { silent = false } = {}) {
+  if (state.loop) stopLoop();
   state.mode = mode;
   $$('.mode').forEach((b) => {
     const on = b.dataset.mode === mode;
@@ -220,12 +279,14 @@ function setMode(mode, { silent = false } = {}) {
     b.setAttribute('aria-pressed', on);
   });
   $('#findBar').hidden = mode !== 'find';
+  setLive(null);
   if (mode === 'find' && !silent) $('#findInput').focus();
   if (!silent) speak(MODE_LABEL[mode], 'en', { remember: false });
 }
 
 async function start() {
   warmUpVoices();
+  initAudio(); // must be created inside a user gesture
   try {
     await startCamera($('#video'));
     state.camera = true;
