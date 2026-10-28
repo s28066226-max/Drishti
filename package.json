@@ -1,0 +1,15 @@
+{
+  "name": "drishti",
+  "version": "1.0.0",
+  "description": "Real-time AI eyes for blind and low-vision people in India: describe, read, count money, find objects and walk safely, in 8 Indian languages.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20.12"
+  },
+  "license": "MIT"
+}
