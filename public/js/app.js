@@ -1,6 +1,7 @@
 import { LANGS, t, clockLabel, PROXIMITY } from './i18n.js';
 import { speak, repeatLast, stopSpeaking, warmUpVoices } from './speech.js';
 import { startCamera, grabFrame, sourceSize } from './camera.js';
+import { checkCanvas } from './quality.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
@@ -113,6 +114,16 @@ async function see(mode, { query = '', previous = '' } = {}) {
   if (state.busy) return null;
   const frame = grabFrame(activeSource());
   if (!frame) { say('Camera is not ready yet.'); return null; }
+
+  // Don't send frames the model can't use; tell the user how to fix the shot instead.
+  const quality = checkCanvas(frame.canvas, { needSharp: mode === 'read' });
+  if (quality.result !== 'ok') {
+    const now = Date.now();
+    if (quality.result !== state.lastQuality?.result || now - state.lastQuality.at > 4000) say(t(lang(), quality.result));
+    state.lastQuality = { result: quality.result, at: now };
+    $('#meta').textContent = `skipped: ${quality.result} (light ${quality.brightness}, detail ${quality.sharpness})`;
+    return null;
+  }
 
   state.busy = true;
   $('#busy').hidden = false;
